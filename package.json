@@ -1,0 +1,53 @@
+{
+  "name": "security-snapshot-api",
+  "version": "1.0.0",
+  "description": "TypeScript client for the Website Security Snapshot API — pay-per-call security header checker via x402 (USDC on Base)",
+  "keywords": [
+    "security",
+    "headers",
+    "csp",
+    "hsts",
+    "x-frame-options",
+    "x402",
+    "usdc",
+    "base",
+    "cloudflare",
+    "api-client",
+    "cybersecurity"
+  ],
+  "author": "LeanOfficeTechnologies",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "peerDependencies": {
+    "x402-fetch": ">=0.1.0",
+    "viem": ">=2.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "x402-fetch": "latest",
+    "viem": "^2.21.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Seiya-wasabi/security-snapshot-api"
+  },
+  "homepage": "https://api.cybersecurity-japan.com",
+  "bugs": {
+    "url": "https://github.com/Seiya-wasabi/security-snapshot-api/issues"
+  }
+}
