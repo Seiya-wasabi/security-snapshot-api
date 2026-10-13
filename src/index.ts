@@ -1,27 +1,32 @@
 /**
  * security-snapshot-api
  * TypeScript client for the Website Security Snapshot API.
- * Wraps x402-fetch to handle on-chain USDC payment automatically.
+ * Pays 0.05 USDC on Base per call with the x402 v2 client (@x402/fetch).
  *
  * @example
  * ```typescript
  * import { SnapshotClient } from "security-snapshot-api";
- * import { createSigner } from "x402-fetch";
+ * import { privateKeyToAccount } from "viem/accounts";
  *
- * const signer = await createSigner("base", "0xYOUR_PRIVATE_KEY");
- * const client = new SnapshotClient(signer);
+ * const client = new SnapshotClient(privateKeyToAccount(process.env.PRIVATE_KEY as `0x${string}`));
  * const result = await client.scan("https://example.com");
  * console.log(result.hsts_present); // true
  * ```
  */
 
-import { wrapFetchWithPayment } from "x402-fetch";
+import { wrapFetchWithPaymentFromConfig } from "@x402/fetch";
+import { ExactEvmScheme } from "@x402/evm";
 import type { SnapshotResult, SnapshotError as SnapshotErrorData, SnapshotClientOptions } from "./types.js";
 
 export type { SnapshotResult, SnapshotErrorData, SnapshotClientOptions };
 
 const DEFAULT_BASE_URL = "https://api.cybersecurity-japan.com";
 const DEFAULT_TIMEOUT_MS = 30_000;
+/** The API accepts USDC on Base mainnet only (CAIP-2 id). */
+const BASE_MAINNET = "eip155:8453";
+
+/** Signer accepted by the x402 v2 EVM scheme, e.g. a viem `privateKeyToAccount()` account. */
+export type SnapshotSigner = ConstructorParameters<typeof ExactEvmScheme>[0];
 
 export class SnapshotApiError extends Error {
   constructor(
@@ -34,8 +39,7 @@ export class SnapshotApiError extends Error {
 }
 
 /**
- * Client for the Website Security Snapshot API.
- * Accepts any x402-fetch compatible signer (viem WalletClient, createSigner, etc.)
+ * Client for the Website Security Snapshot API (x402 v2, Base mainnet).
  */
 export class SnapshotClient {
   private readonly fetch402: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
@@ -43,11 +47,13 @@ export class SnapshotClient {
   private readonly timeoutMs: number;
 
   constructor(
-    /** A viem WalletClient or the result of x402-fetch's createSigner() */
-    signer: Parameters<typeof wrapFetchWithPayment>[1],
+    /** A viem account, e.g. `privateKeyToAccount(key)`, holding USDC on Base */
+    signer: SnapshotSigner,
     options: SnapshotClientOptions = {}
   ) {
-    this.fetch402 = wrapFetchWithPayment(fetch, signer) as (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+    this.fetch402 = wrapFetchWithPaymentFromConfig(fetch, {
+      schemes: [{ network: BASE_MAINNET, client: new ExactEvmScheme(signer) }],
+    }) as (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
     this.baseUrl = (options.baseUrl ?? DEFAULT_BASE_URL).replace(/\/$/, "");
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   }
@@ -78,6 +84,12 @@ export class SnapshotClient {
       throw new SnapshotApiError(err, 400);
     }
 
+    if (res.status === 402) {
+      // Payment was attempted but not accepted; the facilitator's reason is in
+      // the PAYMENT-REQUIRED header (e.g. insufficient USDC on Base).
+      throw new Error(`Payment not accepted: ${paymentError(res) ?? "no reason given"}`);
+    }
+
     if (!res.ok) {
       throw new Error(`Unexpected status ${res.status} from Snapshot API`);
     }
@@ -102,5 +114,15 @@ export class SnapshotClient {
     const res = await fetch(`${this.baseUrl}/health`);
     if (!res.ok) throw new Error(`Health check returned ${res.status}`);
     return res.json();
+  }
+}
+
+function paymentError(res: Response): string | undefined {
+  const header = res.headers.get("PAYMENT-REQUIRED");
+  if (!header) return undefined;
+  try {
+    return (JSON.parse(Buffer.from(header, "base64").toString("utf8")) as { error?: string }).error;
+  } catch {
+    return undefined;
   }
 }

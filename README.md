@@ -4,26 +4,24 @@ TypeScript client for [Website Security Snapshot API](https://api.cybersecurity-
 
 **Pay per call. No account. No API key.**
 
-Payment is settled automatically on-chain via the [x402 protocol](https://github.com/coinbase/x402) — 0.05 USDC on Base.
+Payment is settled automatically on-chain via the [x402 protocol](https://github.com/coinbase/x402) (v2) — 0.05 USDC on Base mainnet. You need a wallet holding USDC on Base.
 
-> **Network status:** Currently on Base Sepolia testnet. Mainnet (Base) goes live **2026-03-28**.
-> Use `NETWORK=base-sepolia` for testing before that date; switch to `NETWORK=base` on 2026-03-28.
+> **v2.0.0 (2026-10-13):** the API moved to x402 v2 on 2026-10-04. v1.x of this package used the v1 client (`x402-fetch`) and can no longer pay. Upgrade to 2.x and pass a viem account instead of a `createSigner()` result.
 
 ## Install
 
 ```bash
-npm install security-snapshot-api x402-fetch viem
+npm install security-snapshot-api viem
 ```
 
 ## Quick Start
 
 ```typescript
 import { SnapshotClient } from "security-snapshot-api";
-import { createSigner } from "x402-fetch";
+import { privateKeyToAccount } from "viem/accounts";
 
-// Your wallet private key (keep this secret!)
-const signer = await createSigner("base", "0xYOUR_PRIVATE_KEY");
-const client = new SnapshotClient(signer);
+// Your wallet private key (keep this secret!) — the wallet needs USDC on Base
+const client = new SnapshotClient(privateKeyToAccount(process.env.PRIVATE_KEY as `0x${string}`));
 
 // Scan any public URL — costs 0.05 USDC per call
 const result = await client.scan("https://example.com");
@@ -38,7 +36,10 @@ console.log(result.security_txt_present);       // null (not checked)
 ## Try Without Paying
 
 ```typescript
-const client = new SnapshotClient(signer); // signer not used for demo
+import { privateKeyToAccount, generatePrivateKey } from "viem/accounts";
+
+// Any account works: demo() never pays
+const client = new SnapshotClient(privateKeyToAccount(generatePrivateKey()));
 const demo = await client.demo();
 // Returns pre-baked example response with _demo: true
 ```
@@ -81,39 +82,16 @@ try {
     console.log(err.data.error_type); // "ssrf"
     console.log(err.data.error);      // "Private or reserved IP ranges are not allowed."
   }
+  // Payment problems (e.g. no USDC on Base) throw an Error starting with
+  // "Payment not accepted:" followed by the facilitator's reason.
 }
 ```
 
-## Use with viem WalletClient
+Error responses (4xx/5xx) are not settled: you only pay for successful results.
 
-```typescript
-import { SnapshotClient } from "security-snapshot-api";
-import { createWalletClient, http } from "viem";
-import { base } from "viem/chains";
-import { privateKeyToAccount } from "viem/accounts";
+## Testnet
 
-const account = privateKeyToAccount("0xYOUR_PRIVATE_KEY");
-const walletClient = createWalletClient({
-  account,
-  chain: base,
-  transport: http(),
-});
-
-const client = new SnapshotClient(walletClient);
-const result = await client.scan("https://example.com");
-```
-
-## Testnet (Base Sepolia)
-
-```typescript
-import { createSigner } from "x402-fetch";
-const signer = await createSigner("base-sepolia", "0xYOUR_TESTNET_KEY");
-const client = new SnapshotClient(signer, {
-  baseUrl: "https://api.cybersecurity-japan.com", // same endpoint, different network in wallet
-});
-```
-
-Get free testnet USDC: https://faucet.circle.com
+There is no testnet endpoint. Use `client.demo()` (free, canned result) to test your integration.
 
 ## Pricing
 

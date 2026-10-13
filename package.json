@@ -1,7 +1,7 @@
 {
   "name": "security-snapshot-api",
-  "version": "1.0.0",
-  "description": "TypeScript client for the Website Security Snapshot API — pay-per-call security header checker via x402 (USDC on Base)",
+  "version": "2.0.0",
+  "description": "TypeScript client for the Website Security Snapshot API — pay-per-call security header checker via x402 v2 (USDC on Base)",
   "keywords": [
     "security",
     "headers",
@@ -34,12 +34,11 @@
     "prepublishOnly": "npm run build"
   },
   "peerDependencies": {
-    "x402-fetch": ">=0.1.0",
     "viem": ">=2.0.0"
   },
   "devDependencies": {
+    "@types/node": "^20.19.43",
     "typescript": "^5.4.0",
-    "x402-fetch": "latest",
     "viem": "^2.21.0"
   },
   "repository": {
@@ -49,5 +48,9 @@
   "homepage": "https://api.cybersecurity-japan.com",
   "bugs": {
     "url": "https://github.com/Seiya-wasabi/security-snapshot-api/issues"
+  },
+  "dependencies": {
+    "@x402/evm": "^2.28.0",
+    "@x402/fetch": "^2.28.0"
   }
 }
