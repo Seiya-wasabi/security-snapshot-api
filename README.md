@@ -104,6 +104,7 @@ There is no testnet endpoint. Use `client.demo()` (free, canned result) to test 
 
 ## Links
 
+- [Examples](./examples): check a URL before your agent links to it (proceed / caution / block), Claude Desktop MCP config
 - [API docs](https://api.cybersecurity-japan.com/docs)
 - [OpenAPI spec](https://api.cybersecurity-japan.com/openapi.json)
 - [Quickstart guide](https://api.cybersecurity-japan.com/quickstart)
